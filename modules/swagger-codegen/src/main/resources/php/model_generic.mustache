@@ -161,7 +161,7 @@ class {{classname}} {{#parentSchema}}extends {{{parent}}} {{/parentSchema}}{{^pa
 
         {{/parentSchema}}
         {{#vars}}
-        $this->container['{{name}}'] = isset($data['{{name}}']) ? $data['{{name}}'] : {{#defaultValue}}{{{defaultValue}}}{{/defaultValue}}{{^defaultValue}}null{{/defaultValue}};
+        $this->container['{{name}}'] = isset($data['{{name}}']) ? $this->createData($data['{{name}}'], '{{name}}')  : {{#defaultValue}}{{{defaultValue}}}{{/defaultValue}}{{^defaultValue}}null{{/defaultValue}};
         {{/vars}}
         {{#discriminator}}
 
@@ -169,6 +169,53 @@ class {{classname}} {{#parentSchema}}extends {{{parent}}} {{/parentSchema}}{{^pa
         $discriminator = array_search('{{discriminator}}', self::$attributeMap, true);
         $this->container[$discriminator] = static::$swaggerModelName;
         {{/discriminator}}
+    }
+
+    /**
+     * create data according to types;
+     * non object types will just be returend as is:
+     * object types will return an instance of themselves or and array of instances
+     *
+     * @param mixed[] $data
+     * @param string $property
+     * @return mixed
+     */
+    public function createData($data = null, $property)
+    {
+        if ($data === null) {
+            return '';
+        }
+        $swaggerType = self::$swaggerTypes[$property];
+
+        preg_match("/([\\\\\w\d]+)(\[\])?/", $swaggerType, $matches);
+
+        // handle object types
+        if (count($matches) > 0 && count($matches) < 3) {
+            try {
+                $reflection = new \ReflectionClass($swaggerType);
+                $reflectionInstance = $reflection->newInstance($data);
+
+                return $reflectionInstance;
+            } catch (\Exception $ex) {
+                return $data;
+            }
+        } elseif (count($matches) >= 3) {
+            // Object[]
+            // arrays of objects have to be handled differently
+            $reflectionInstances = [];
+            foreach ($data as $d) {
+                try {
+                    $reflection = new \ReflectionClass(str_replace("[]", "", $swaggerType));
+                    $reflectionInstances[] = $reflection->newInstance($d);
+
+                    return $reflectionInstances;
+                } catch (\Exception $ex) {
+                    return $data;
+                }
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -252,7 +299,7 @@ class {{classname}} {{#parentSchema}}extends {{{parent}}} {{/parentSchema}}{{^pa
     }
 
     /**
-     * Validate all the properties in the model
+     * Validate all the properties in the 
      * return true if all passed
      *
      * @return bool True if all properties are valid
@@ -414,5 +461,43 @@ class {{classname}} {{#parentSchema}}extends {{{parent}}} {{/parentSchema}}{{^pa
         }
 
         return json_encode(ObjectSerializer::sanitizeForSerialization($this));
+    }
+    
+    /**
+     * @param boolean $removeEmptyValues [remove all empty values if true]
+     * @param array $retrieveKeys [list of keys to get back in any case]
+     * 
+     * Examples:
+     * toArray() => returns only non empty values
+     * toArray(true) => returns all values
+     */
+    public function toArray($retrieveAllValues = false){
+        $container = $this->container;
+        foreach ($container as $key => &$value) {
+            if (!$retrieveAllValues && empty($value)) {
+                unset($container[$key]);
+                continue;
+            }
+            
+            if (gettype($value) === "object") {
+                if(method_exists($value, 'toArray')) {
+                    $value = $value->toArray();
+                }else{
+                    if(get_class($value) === "DateTime"){
+                        $value = $value->format("Y-m-d\TH:i:s");
+                    }else{
+                        $value = (array) $value;
+                    }
+                }
+            }
+            if (is_array($value)) {
+                foreach ($value as &$v) {
+                    if (gettype($v) === "object") {
+                        $v = $v->toArray();
+                    }
+                }
+            }
+        };
+        return $container;
     }
 }
