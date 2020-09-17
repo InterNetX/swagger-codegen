@@ -481,7 +481,7 @@ class {{classname}} {{#parentSchema}}extends {{{parent}}} {{/parentSchema}}{{^pa
             
             if (gettype($value) === "object") {
                 if(method_exists($value, 'toArray')) {
-                    $value = $value->toArray();
+                    $value = $value->toArray($retrieveAllValues);
                 }else{
                     if(get_class($value) === "DateTime"){
                         $value = $value->format("Y-m-d\TH:i:s");
@@ -493,7 +493,7 @@ class {{classname}} {{#parentSchema}}extends {{{parent}}} {{/parentSchema}}{{^pa
             if (is_array($value)) {
                 foreach ($value as &$v) {
                     if (gettype($v) === "object") {
-                        $v = $v->toArray();
+                        $v = $v->toArray($retrieveAllValues);
                     }
                 }
             }
