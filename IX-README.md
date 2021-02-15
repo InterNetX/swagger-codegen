@@ -14,7 +14,7 @@ You can then find the created .jar file in:
 
 ## Templates
 
-modules/swagger-codegen/-src/main/resources
+modules/swagger-codegen/src/main/resources
 
 ## External Documentation and source
 
