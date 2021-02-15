@@ -180,9 +180,9 @@ class {{classname}} {{#parentSchema}}extends {{{parent}}} {{/parentSchema}}{{^pa
      * @param string $property
      * @return mixed
      */
-    public function createData($data = null, $property)
+    public function createData($data = null, $property = '')
     {
-        if ($data === null) {
+        if ($data === null || $property === '') {
             return '';
         }
         $swaggerType = self::$swaggerTypes[$property];
@@ -218,9 +218,9 @@ class {{classname}} {{#parentSchema}}extends {{{parent}}} {{/parentSchema}}{{^pa
                 } catch (\Exception $ex) {
                     return $d;
                 }
-
-                return $reflectionInstances;
             }
+
+            return $reflectionInstances;
         }
 
         return $data;
